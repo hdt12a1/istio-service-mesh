@@ -1,0 +1,58 @@
+# Values for Kiali Operator
+kiali-operator:
+  # Whether to create a Kiali CR automatically when installing the operator
+  cr:
+    create: true
+    # Namespace where Kiali CR will be created
+    namespace: istio-system
+    spec:
+      # Authentication strategy
+      auth:
+        strategy: "anonymous"  # Options: anonymous, token, openshift, openid, header
+      
+      # Deployment settings
+      deployment:
+        # Accessible_namespaces defines which namespaces Kiali can access
+        accessible_namespaces:
+          - "**"  # "**" means "all namespaces"
+        
+        # Resources for the Kiali server container
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "64Mi"
+          limits:
+            memory: "1Gi"
+      
+      # External services configuration
+      external_services:
+        # Prometheus connection information
+        prometheus:
+          # URL for the Prometheus server
+          url: "http://prometheus-server.istio-system:9090"
+        
+        # Grafana connection information
+        grafana:
+          enabled: true
+          # URL for the Grafana server
+          url: "http://grafana.istio-system:3000"
+        
+        # Tracing connection information
+        tracing:
+          enabled: true
+          # URL for the Jaeger Query service
+          in_cluster_url: "http://jaeger-query.istio-system:16686"
+      
+      # Server settings
+      server:
+        # Web root for Kiali web application
+        web_root: "/"
+        # Port for the Kiali service
+        port: 20001
+      
+      # UI customization
+      ui:
+        # Default refresh interval for auto-refresh (in milliseconds)
+        refresh_interval: 15000
+        # Show the Kiali logo in the top-left of the UI
+        show_kiali_logo: true

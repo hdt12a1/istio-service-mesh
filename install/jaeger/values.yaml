@@ -1,0 +1,80 @@
+jaeger:
+  # Use the all-in-one deployment strategy for simplicity
+  # For production, consider using the "production" strategy with Elasticsearch
+  strategy: allInOne
+  
+  # All-in-one configuration
+  allInOne:
+    enabled: true
+    image: jaegertracing/all-in-one
+    tag: 1.42.0
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        cpu: 200m
+        memory: 400Mi
+    # Enable Ingress for the all-in-one UI
+    ingress:
+      enabled: true
+      ingressClassName: nginx
+      hosts:
+        - host: "*"  # Wildcard to accept any hostname
+          paths:
+            - path: /
+              pathType: Prefix
+    # Storage configuration (memory for simplicity)
+    # For production, use Elasticsearch or Cassandra
+    storage:
+      type: memory
+      options:
+        memory:
+          max-traces: 100000
+    # Annotations to enable Prometheus scraping
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "14269"
+  
+  # Agent configuration
+  agent:
+    enabled: false  # Not needed with all-in-one
+  
+  # Collector configuration (not used in all-in-one mode)
+  collector:
+    enabled: false
+  
+  # Query configuration (not used in all-in-one mode)
+  query:
+    enabled: false
+  
+  # Specify service type
+  service:
+    # Use ClusterIP as we're exposing through Ingress
+    type: ClusterIP
+  
+  # Enable Istio injection for Jaeger pods
+  sidecar:
+    istio:
+      enabled: true
+  
+  # Prometheus integration
+  provisionDataStore:
+    cassandra: false
+    elasticsearch: false
+    kafka: false
+  
+  # Sampling strategies
+  sampling:
+    options:
+      default_strategy:
+        type: probabilistic
+        param: 1.0  # Sample 100% of traces for testing
+        # For production, reduce to 0.1 (10%) or lower
+  
+  # Istio integration
+  # These settings help Istio find and use Jaeger
+  extraEnv:
+    - name: COLLECTOR_ZIPKIN_HOST_PORT
+      value: ":9411"  # Required for Istio to send traces
+    - name: QUERY_BASE_PATH
+      value: /jaeger  # Base path for the UI

@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: grpc-client-job
+spec:
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+      - name: grpc-client
+        image: product-service:v1
+        command: ["python", "client.py"]
+        args: ["--target", "product-service:50051", "--requests", "300", "--interval", "0.2"]
+      restartPolicy: Never
+  backoffLimit: 0

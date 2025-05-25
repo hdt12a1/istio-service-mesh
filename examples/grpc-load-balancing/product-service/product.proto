@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package product;
+
+service ProductService {
+  rpc GetProduct (ProductRequest) returns (ProductResponse) {}
+  rpc ListProducts (ListProductsRequest) returns (ListProductsResponse) {}
+}
+
+message ProductRequest {
+  string product_id = 1;
+}
+
+message ProductResponse {
+  string product_id = 1;
+  string name = 2;
+  string description = 3;
+  float price = 4;
+  string server_id = 5;  // To identify which server instance responded
+}
+
+message ListProductsRequest {
+  int32 page_size = 1;
+  int32 page_number = 2;
+}
+
+message ListProductsResponse {
+  repeated ProductResponse products = 1;
+  string server_id = 2;  // To identify which server instance responded
+}

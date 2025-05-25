@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+  labels:
+    app: product-service
+    service: product-service
+spec:
+  ports:
+  - port: 50051
+    name: grpc
+  selector:
+    app: product-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service-v1
+  labels:
+    app: product-service
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: product-service
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: product-service
+        version: v1
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+      - name: product-service
+        image: product-service:v1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 50051
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 200m
+            memory: 200Mi

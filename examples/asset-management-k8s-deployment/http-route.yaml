@@ -1,0 +1,31 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: asset-management-route
+  namespace: default
+spec:
+  parentRefs:
+  - name: public-api-gateway
+    namespace: gateway
+  hostnames:
+  - "sit-gateway.tcex.com.vn"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /asset-management
+    backendRefs:
+    - name: asset-management
+      port: 8080
+---
+# DestinationRule for asset-management service with strict mTLS
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: asset-management
+  namespace: default
+spec:
+  host: asset-management.default.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL # Enforces mTLS for this service

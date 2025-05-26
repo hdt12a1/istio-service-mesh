@@ -1,0 +1,66 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: asset-management-gateway
+  namespace: default
+spec:
+  selector:
+    istio: ingressgateway # Use the default Istio ingress gateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "asset-management.example.com" # Replace with your actual domain
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: asset-management-vs
+  namespace: default
+spec:
+  hosts:
+  - "asset-management.example.com" # Replace with your actual domain
+  gateways:
+  - asset-management-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: asset-management
+        port:
+          number: 80 # Adjust if your service uses a different port
+---
+# DestinationRule for asset-management service with strict mTLS
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: asset-management
+  namespace: default
+spec:
+  host: asset-management
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL # Enforces mTLS for this service
+---
+# AuthorizationPolicy to allow traffic from the gateway to the service
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: asset-management-policy
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: asset-management
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
+    to:
+    - operation:
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+        paths: ["/*"]

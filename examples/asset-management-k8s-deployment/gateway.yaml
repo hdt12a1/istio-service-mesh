@@ -1,0 +1,35 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"gateway.networking.k8s.io/v1","kind":"Gateway","metadata":{"annotations":{},"labels":{"argocd.argoproj.io/instance":"sit-tcex-cluster-gateway"},"name":"public-api-gateway","namespace":"gateway"},"spec":{"gatewayClassName":"istio","infrastructure":{"parametersRef":{"group":"","kind":"ConfigMap","name":"public-gw-options"}},"listeners":[{"allowedRoutes":{"namespaces":{"from":"All"}},"hostname":"sit-gateway.tcex.com.vn","name":"https","port":443,"protocol":"HTTPS","tls":{"certificateRefs":[{"name":"tcex-cert"}],"mode":"Terminate"}}]}}
+  creationTimestamp: "2025-05-22T10:52:53Z"
+  generation: 2
+  labels:
+    argocd.argoproj.io/instance: sit-tcex-cluster-gateway
+  name: public-api-gateway
+  namespace: gateway
+  resourceVersion: "18912333"
+  uid: c3372d11-c43e-4568-a33d-ad05aa16f322
+spec:
+  gatewayClassName: istio
+  infrastructure:
+    parametersRef:
+      group: ""
+      kind: ConfigMap
+      name: public-gw-options
+  listeners:
+  - allowedRoutes:
+      namespaces:
+        from: All
+    hostname: sit-gateway.tcex.com.vn
+    name: https
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - group: ""
+        kind: Secret
+        name: tcex-cert
+      mode: Terminate

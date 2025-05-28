@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: public-gw-options
+data:
+  service: |
+    metadata:
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-name: k8s-istio-public-gateway
+        service.beta.kubernetes.io/aws-load-balancer-type: "external"
+        service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
+        service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+        service.beta.kubernetes.io/aws-load-balancer-security-groups: "sg-0bca178cfcac209d4"
+        service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules: "true"
+        service.beta.kubernetes.io/aws-load-balancer-subnets: "subnet-06ad70024804d36a9,subnet-04fc6bd6cdcab35c4"
+        service.beta.kubernetes.io/aws-load-balancer-private-ipv4-addresses: "10.83.133.10,10.83.133.138"
+        service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
+        service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: "Environment=sit,ScrumTeam=share,Terraform=false,ManagedBy=istio,System=eks,Organization=TCEX,map-migrated=mig9P9Y1G4YV4"
+  deployment: |
+    spec:
+      replicas: 2
+      template:
+        spec:
+          containers:
+          - name: istio-proxy
+            args:
+            - proxy
+            - router
+            - --domain
+            - $(POD_NAMESPACE).svc.cluster.local
+            - --proxyLogLevel
+            - debug  # Changed from warning to debug
+            - --proxyComponentLogLevel
+            - misc:debug,http:debug,client:debug,filter:debug  # Valid component names
+            - --log_output_level
+            - default:debug  # Changed from default:info to default:debug
+          nodeSelector:
+            kubernetes.io/arch: arm64

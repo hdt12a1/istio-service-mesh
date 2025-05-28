@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: grpcurl-tester
+  labels:
+    app: grpcurl-tester
+spec:
+  containers:
+  - name: grpcurl
+    image: fullstorydev/grpcurl:latest
+    # Keep the container running
+    command: ["sleep", "infinity"]
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grpcurl-test-scripts
+data:
+  test-product-service.sh: |
+    #!/bin/sh
+    
+    # Test GetProduct method
+    echo "Testing GetProduct method..."
+    grpcurl -d '{"product_id": "123"}' -plaintext product-service:50051 product.ProductService/GetProduct
+    
+    # Test ListProducts method
+    echo "Testing ListProducts method..."
+    grpcurl -d '{"page_size": 10, "page_number": 1}' -plaintext product-service:50051 product.ProductService/ListProducts
+    
+    # List all available services
+    echo "Listing all available services..."
+    grpcurl -plaintext product-service:50051 list
+    
+    # List methods for ProductService
+    echo "Listing methods for ProductService..."
+    grpcurl -plaintext product-service:50051 list product.ProductService
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpcurl-tester
+  labels:
+    app: grpcurl-tester
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grpcurl-tester
+  template:
+    metadata:
+      labels:
+        app: grpcurl-tester
+    spec:
+      containers:
+      - name: grpcurl
+        image: fullstorydev/grpcurl:latest
+        # Keep the container running
+        command: ["sleep", "infinity"]
+        volumeMounts:
+        - name: test-scripts
+          mountPath: /scripts
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+      volumes:
+      - name: test-scripts
+        configMap:
+          name: grpcurl-test-scripts
+          defaultMode: 0755
+---
+# Job for one-time testing
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: grpcurl-test-job
+spec:
+  template:
+    spec:
+      containers:
+      - name: grpcurl
+        image: fullstorydev/grpcurl:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "Testing product service with grpcurl..."
+          grpcurl -d '{"product_id": "123"}' -plaintext product-service:50051 product.ProductService/GetProduct
+          echo "Test complete!"
+      restartPolicy: Never
+  backoffLimit: 1

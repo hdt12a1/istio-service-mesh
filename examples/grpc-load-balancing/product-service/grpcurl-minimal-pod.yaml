@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: grpcurl-tester
+  labels:
+    app: grpcurl-tester
+spec:
+  containers:
+  - name: grpcurl
+    image: fullstorydev/grpcurl:latest
+    # Just use the grpcurl command itself with a long timeout
+    # This will make the container stay running
+    command: ["grpcurl"]
+    args: ["-max-time", "86400", "localhost:1", "list"]

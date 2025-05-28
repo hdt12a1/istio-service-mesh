@@ -5,6 +5,7 @@ import random
 import socket
 import grpc
 import logging
+import argparse
 from concurrent import futures
 
 import product_pb2
@@ -98,7 +99,7 @@ class ProductServiceServicer(product_pb2_grpc.ProductServiceServicer):
             server_id=f"{SERVER_ID} ({HOSTNAME})"
         )
 
-def serve():
+def serve(port=50051):
     """Start the gRPC server."""
     # Create a gRPC server
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
@@ -107,8 +108,7 @@ def serve():
     product_pb2_grpc.add_ProductServiceServicer_to_server(
         ProductServiceServicer(), server)
     
-    # Listen on port 50051
-    port = os.environ.get('PORT', '50051')
+    # Listen on specified port
     server.add_insecure_port(f'[::]:{port}')
     server.start()
     
@@ -123,4 +123,10 @@ def serve():
         server.stop(0)
 
 if __name__ == '__main__':
-    serve()
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='gRPC Product Service Server')
+    parser.add_argument('--port', type=int, default=50051, help='Port to listen on')
+    args = parser.parse_args()
+    
+    # Start server with specified port
+    serve(args.port)

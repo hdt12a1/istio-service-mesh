@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+  namespace: "avenger"
+  labels:
+    app: product-service
+    service: product-service
+spec:
+  ports:
+  - port: 50051
+    name: grpc
+  selector:
+    app: product-service
+--- 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service-v1
+  namespace: "avenger"
+  labels:
+    app: product-service
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: product-service
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: product-service
+        version: v1
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      imagePullSecrets:
+      - name: "tcbs-registry-credential-harbor"
+      containers:
+      - name: product-service
+        image: harbor.tcbs.com.vn/test/duck-grpc:v0.1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 50051
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 200m
+            memory: 200Mi
+--- 
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: product-service-grpc-route
+  namespace: avenger
+spec:
+  parentRefs:
+  - name: public-api-gateway
+    namespace: gateway
+  hostnames:
+  - "sit-gateway.tcex.com.vn"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /product.ProductService
+    backendRefs:
+    - name: product-service
+      port: 50051
+      kind: Service
+--- 
+# DestinationRule for product-service with strict mTLS
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: product-service-mtls
+  namespace: avenger
+spec:
+  host: product-service.avenger.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL # Enforces mTLS for this service
+    loadBalancer:
+      simple: LEAST_CONN
+    connectionPool:
+      http:
+        http2MaxRequests: 1000
+        maxRequestsPerConnection: 100
+
+---
+ 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-tools
+  namespace: avenger
+  labels:
+    app: debug-tools
+  annotations:
+    sidecar.istio.io/inject: "true"
+spec:
+  imagePullSecrets:
+  - name: "tcbs-registry-credential-harbor"
+  containers:
+  - name: debug-tools
+    image: harbor.tcbs.com.vn/test/duck-grpcurl:v0.1
+    imagePullPolicy: IfNotPresent
+    command: ["sleep", "infinity"]
+  restartPolicy: Never     

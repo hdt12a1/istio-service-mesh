@@ -1,0 +1,265 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "2"
+    field.cattle.io/publicEndpoints: '[{"addresses":["k8s-istio-public-gateway-06fd3518ab262929.elb.ap-southeast-1.amazonaws.com"[],"port":15021,"protocol":"TCP","serviceName":"gateway:public-api-gateway-istio","allNodes":false},{"addresses":["k8s-istio-public-gateway-06fd3518ab262929.elb.ap-southeast-1.amazonaws.com"],"port":443,"protocol":"TCP","serviceName":"gateway:public-api-gateway-istio","allNodes":false}]'
+  creationTimestamp: "2025-05-22T10:52:53Z"
+  generation: 3
+  labels:
+    argocd.argoproj.io/instance: sit-tcex-cluster-gateway
+    gateway.istio.io/managed: istio.io-gateway-controller
+    gateway.networking.k8s.io/gateway-name: public-api-gateway
+  name: public-api-gateway-istio
+  namespace: gateway
+  ownerReferences:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    name: public-api-gateway
+    uid: c3372d11-c43e-4568-a33d-ad05aa16f322
+  resourceVersion: "21568698"
+  uid: 87172f56-d37d-42f8-8504-0a7aa4e6b0b9
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: public-api-gateway
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        istio.io/rev: default
+        prometheus.io/path: /stats/prometheus
+        prometheus.io/port: "15020"
+        prometheus.io/scrape: "true"
+      creationTimestamp: null
+      labels:
+        argocd.argoproj.io/instance: sit-tcex-cluster-gateway
+        gateway.istio.io/managed: istio.io-gateway-controller
+        gateway.networking.k8s.io/gateway-name: public-api-gateway
+        service.istio.io/canonical-name: public-api-gateway-istio
+        service.istio.io/canonical-revision: latest
+        sidecar.istio.io/inject: "false"
+    spec:
+      containers:
+      - args:
+        - proxy
+        - router
+        - --domain
+        - $(POD_NAMESPACE).svc.cluster.local
+        - --proxyLogLevel
+        - warning
+        - --proxyComponentLogLevel
+        - misc:error
+        - --log_output_level
+        - default:info
+        env:
+        - name: PILOT_CERT_PROVIDER
+          value: istiod
+        - name: CA_ADDR
+          value: istiod.istio-system.svc:15012
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.serviceAccountName
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.hostIP
+        - name: ISTIO_CPU_LIMIT
+          valueFrom:
+            resourceFieldRef:
+              divisor: "0"
+              resource: limits.cpu
+        - name: PROXY_CONFIG
+          value: |
+            {}
+        - name: ISTIO_META_POD_PORTS
+          value: '[]'
+        - name: ISTIO_META_APP_CONTAINERS
+        - name: GOMEMLIMIT
+          valueFrom:
+            resourceFieldRef:
+              divisor: "0"
+              resource: limits.memory
+        - name: GOMAXPROCS
+          valueFrom:
+            resourceFieldRef:
+              divisor: "0"
+              resource: limits.cpu
+        - name: ISTIO_META_CLUSTER_ID
+          value: Kubernetes
+        - name: ISTIO_META_NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: ISTIO_META_INTERCEPTION_MODE
+          value: REDIRECT
+        - name: ISTIO_META_WORKLOAD_NAME
+          value: public-api-gateway-istio
+        - name: ISTIO_META_OWNER
+          value: kubernetes://apis/apps/v1/namespaces/gateway/deployments/public-api-gateway-istio
+        - name: ISTIO_META_MESH_ID
+          value: cluster.local
+        - name: TRUST_DOMAIN
+          value: cluster.local
+        image: 490719711990.dkr.ecr.ap-southeast-1.amazonaws.com/dockerhub/istio/proxyv2:1.26.0
+        imagePullPolicy: Always
+        name: istio-proxy
+        ports:
+        - containerPort: 15020
+          name: metrics
+          protocol: TCP
+        - containerPort: 15021
+          name: status-port
+          protocol: TCP
+        - containerPort: 15090
+          name: http-envoy-prom
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 4
+          httpGet:
+            path: /healthz/ready
+            port: 15021
+            scheme: HTTP
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: "2"
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 1337
+          runAsNonRoot: true
+          runAsUser: 1337
+        startupProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /healthz/ready
+            port: 15021
+            scheme: HTTP
+          initialDelaySeconds: 1
+          periodSeconds: 1
+          successThreshold: 1
+          timeoutSeconds: 1
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/run/secrets/workload-spiffe-uds
+          name: workload-socket
+        - mountPath: /var/run/secrets/credential-uds
+          name: credential-socket
+        - mountPath: /var/run/secrets/workload-spiffe-credentials
+          name: workload-certs
+        - mountPath: /var/run/secrets/istio
+          name: istiod-ca-cert
+        - mountPath: /var/lib/istio/data
+          name: istio-data
+        - mountPath: /etc/istio/proxy
+          name: istio-envoy
+        - mountPath: /var/run/secrets/tokens
+          name: istio-token
+        - mountPath: /etc/istio/pod
+          name: istio-podinfo
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        sysctls:
+        - name: net.ipv4.ip_unprivileged_port_start
+          value: "0"
+      serviceAccount: public-api-gateway-istio
+      serviceAccountName: public-api-gateway-istio
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir: {}
+        name: workload-socket
+      - emptyDir: {}
+        name: credential-socket
+      - emptyDir: {}
+        name: workload-certs
+      - emptyDir:
+          medium: Memory
+        name: istio-envoy
+      - emptyDir: {}
+        name: istio-data
+      - downwardAPI:
+          defaultMode: 420
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels
+            path: labels
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.annotations
+            path: annotations
+        name: istio-podinfo
+      - name: istio-token
+        projected:
+          defaultMode: 420
+          sources:
+          - serviceAccountToken:
+              audience: istio-ca
+              expirationSeconds: 43200
+              path: istio-token
+      - configMap:
+          defaultMode: 420
+          name: istio-ca-root-cert
+        name: istiod-ca-cert
+status:
+  availableReplicas: 2
+  conditions:
+  - lastTransitionTime: "2025-05-22T11:10:35Z"
+    lastUpdateTime: "2025-05-22T11:10:43Z"
+    message: ReplicaSet "public-api-gateway-istio-68c9c76865" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  - lastTransitionTime: "2025-05-27T12:09:05Z"
+    lastUpdateTime: "2025-05-27T12:09:05Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  observedGeneration: 3
+  readyReplicas: 2
+  replicas: 2
+  updatedReplicas: 2
+ 

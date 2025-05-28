@@ -2,9 +2,12 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: grpc-client-job
+  namespace: avenger  # Make sure this is in the same namespace as your service
 spec:
   template:
     metadata:
+      labels:
+        app: grpc-client
       annotations:
         sidecar.istio.io/inject: "true"
     spec:
@@ -12,6 +15,11 @@ spec:
       - name: grpc-client
         image: product-service:v1
         command: ["python", "client.py"]
-        args: ["--target", "product-service:50051", "--requests", "300", "--interval", "0.2"]
+        args: ["--target", "product-service.avenger.svc.cluster.local:50051", "--requests", "50", "--interval", "0.5"]
+        env:
+        - name: GRPC_GO_LOG_SEVERITY_LEVEL
+          value: "info"
+        - name: GRPC_GO_LOG_VERBOSITY_LEVEL
+          value: "99"
       restartPolicy: Never
-  backoffLimit: 0
+  backoffLimit: 1
